@@ -1,7 +1,11 @@
 package com.oll.esp;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,6 +24,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class MainActivity extends Activity {
     private EditText pkgField;
@@ -52,6 +58,13 @@ public final class MainActivity extends Activity {
         pkgField.setText("com.tencent.ig");
         pkgField.setSingleLine(true);
         root.addView(pkgField);
+
+        Button pick = new Button(this);
+        pick.setText("Pick installed game");
+        pick.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override public void onClick(android.view.View v) { showPackagePicker(); }
+        });
+        root.addView(pick);
 
         Button grant = new Button(this);
         grant.setText("1. Grant overlay permission");
@@ -134,6 +147,32 @@ public final class MainActivity extends Activity {
                     ? "overlay ready — fill config.txt on device, then start"
                     : "overlay permission missing — tap button 1");
         }
+    }
+
+    private void showPackagePicker() {
+        PackageManager pm = getPackageManager();
+        List<PackageInfo> installed = pm.getInstalledPackages(0);
+        final ArrayList<String> hits = new ArrayList<>();
+        for (PackageInfo p : installed) {
+            String s = p.packageName.toLowerCase();
+            if (s.contains("pubg") || s.contains("flash") || s.contains("bgmi")
+                    || (s.contains("tencent") && (s.contains("ig") || s.contains("game")))) {
+                hits.add(p.packageName);
+            }
+        }
+        if (hits.isEmpty()) hits.add("no match — type the package manually");
+        final String[] items = hits.toArray(new String[hits.size()]);
+        new AlertDialog.Builder(this)
+                .setTitle("Select game package")
+                .setItems(items, new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int which) {
+                        if (!items[which].startsWith("no match")) {
+                            pkgField.setText(items[which]);
+                            status.setText("selected " + items[which]);
+                        }
+                    }
+                })
+                .show();
     }
 
     private void runDiscovery(final String pkg) {

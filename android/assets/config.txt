@@ -1,5 +1,6 @@
 # Paste your per-version offsets here. All values are hex or decimal.
 # Recover them using tools/addr_to_offset.js + README.md in the repo root.
+lib=libUE4.so
 GWorld=0x0
 UWorld_PersistentLevel=0x0
 UWorld_FirstPlayerController=0x0

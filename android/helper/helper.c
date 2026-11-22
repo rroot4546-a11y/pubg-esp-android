@@ -28,7 +28,7 @@ typedef struct { float x,y,z; } Vec;
 typedef struct { float w,x,y,z; } Quat;
 typedef struct { Quat q; Vec t; } Xform;
 
-static const char *g_lib = "libUE4.so";
+static char g_lib[128] = "libUE4.so";
 static int g_sw = 1080, g_sh = 2400;
 static int g_mem_fd = -1;
 static pid_t g_pid = 0;
@@ -51,7 +51,11 @@ static int parse_cfg(const char *path, Offsets *o, Bones *b) {
         trim(k); trim(v);
         if (!*k) continue;
 
-        if (strncmp(k, "lib=", 4) == 0) continue;
+        if (strcmp(k, "lib") == 0) {
+            strncpy(g_lib, v, sizeof g_lib - 1);
+            g_lib[sizeof g_lib - 1] = 0;
+            continue;
+        }
         if (strcmp(k, "width") == 0) { g_sw = atoi(v); continue; }
         if (strcmp(k, "height") == 0) { g_sh = atoi(v); continue; }
 

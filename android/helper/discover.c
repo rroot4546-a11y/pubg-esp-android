@@ -13,12 +13,16 @@
 
 typedef uint64_t u64;
 
-typedef struct { u64 s, e; int x, w; } Map;
+typedef struct { u64 s, e; int x, w; char path[512]; } Map;
 static Map g_maps[2048];
 static int g_nmaps = 0;
 static pid_t g_pid = 0;
 static u64 g_base = 0, g_modlo = 0, g_modhi = 0;
 static const char *g_lib = "libUE4.so";
+static const char *const LIB_CANDIDATES[] = {
+    "libUE4.so", "libue4.so", "libGame.so", "libUnreal.so",
+    "libpubg.so", "libTencent.so", "libUE4.so"
+};
 
 static int rd(u64 a, void *b, size_t n) {
     struct iovec l = { b, n }, r = { (void *)a, n };
@@ -43,12 +47,36 @@ static void load_maps(void) {
         m->s = s; m->e = e;
         m->x = strchr(prot, 'x') != NULL;
         m->w = strchr(prot, 'w') != NULL;
-        if (strstr(line, g_lib)) {
-            if (!g_modlo || s < g_modlo) g_modlo = s;
-            if (e > g_modhi) g_modhi = e;
+        char *slash = strchr(line, '/');
+        if (slash) {
+            strncpy(m->path, slash, sizeof m->path - 1);
+            m->path[sizeof m->path - 1] = 0;
+            char *nl = strchr(m->path, '\n');
+            if (nl) *nl = 0;
         }
     }
     fclose(f);
+}
+
+static void detect_lib(void) {
+    for (unsigned k = 0; k < sizeof LIB_CANDIDATES / sizeof LIB_CANDIDATES[0]; k++) {
+        for (int i = 0; i < g_nmaps; i++) {
+            if (strstr(g_maps[i].path, LIB_CANDIDATES[k])) {
+                g_lib = LIB_CANDIDATES[k];
+                fprintf(stderr, "# engine module: %s\n", g_lib);
+                return;
+            }
+        }
+    }
+    fprintf(stderr, "# no known engine module, defaulting to %s\n", g_lib);
+}
+
+static void set_module_range(void) {
+    for (int i = 0; i < g_nmaps; i++) {
+        if (!strstr(g_maps[i].path, g_lib)) continue;
+        if (!g_modlo || g_maps[i].s < g_modlo) g_modlo = g_maps[i].s;
+        if (g_maps[i].e > g_modhi) g_modhi = g_maps[i].e;
+    }
 }
 
 static int inmap(u64 a) {
@@ -241,6 +269,8 @@ int main(int argc, char **argv) {
     g_pid = find_pid(pkg);
     if (!g_pid) { fprintf(stderr, "# target not running\n"); return 4; }
     load_maps();
+    detect_lib();
+    set_module_range();
     /* base = start of first executable mapping of the lib */
     for (int i = 0; i < g_nmaps; i++) {
         if (g_maps[i].x && g_maps[i].s >= g_modlo && g_maps[i].s < g_modhi) {
@@ -268,6 +298,7 @@ int main(int argc, char **argv) {
     FILE *f = fopen(out, "w");
     if (!f) { fprintf(stderr, "# cannot write %s\n", out); return 6; }
     fprintf(f, "# auto-discovered offsets — verify in game\n");
+    fprintf(f, "lib=%s\n", g_lib);
     fprintf(f, "GWorld=0x%llx\n", (unsigned long long)(gw-g_base));
     fprintf(f, "UWorld_PersistentLevel=0x%llx\n", (unsigned long long)persist);
     fprintf(f, "ULevel_Actors=0x%llx\n", (unsigned long long)actors);
