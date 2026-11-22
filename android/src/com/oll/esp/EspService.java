@@ -22,6 +22,7 @@ import java.util.List;
 
 public final class EspService extends Service {
     public static final String EXTRA_PKG = "pkg";
+    public static final String EXTRA_TEST = "test";
     private static final String CHANNEL = "oll_esp";
 
     private WindowManager wm;
@@ -82,6 +83,14 @@ public final class EspService extends Service {
         }
         startForeground(1, note);
 
+        if (intent != null && intent.getBooleanExtra(EXTRA_TEST, false)) {
+            final List<Target> demo = new ArrayList<>();
+            demo.add(new Target(120f, 240f, 520f, 760f, true, 42, -1f, -1f, new float[0]));
+            overlay.setTargets(demo);
+            Dbg.log(this, "test overlay drawn");
+            return START_STICKY;
+        }
+
         if (reader != null && reader.isAlive()) return START_STICKY;
         running = true;
         final String target = pkg;
@@ -116,14 +125,33 @@ public final class EspService extends Service {
             }).start();
 
             final List<Target> batch = new ArrayList<>();
+            int frames = 0, framesWithTargets = 0;
+            boolean firstTargetLogged = false;
             String line;
             while (running && (line = out.readLine()) != null) {
                 final String s = line;
-                if (s.startsWith("#") || s.startsWith("!")) { post(s); continue; }
+                if (s.startsWith("#") || s.startsWith("!")) {
+                    Dbg.log(this, s);
+                    post(s);
+                    continue;
+                }
                 if (s.startsWith("T ")) {
                     Target t = parseTarget(s);
-                    if (t != null) batch.add(t);
+                    if (t != null) {
+                        if (!firstTargetLogged) {
+                            Dbg.log(this, "first target: " + s);
+                            firstTargetLogged = true;
+                        }
+                        batch.add(t);
+                    }
                 } else if (s.equals("F")) {
+                    frames++;
+                    if (!batch.isEmpty()) framesWithTargets++;
+                    if (frames % 100 == 0) {
+                        Dbg.log(this, "frames=" + frames
+                                + " withTargets=" + framesWithTargets
+                                + " last=" + batch.size());
+                    }
                     final List<Target> copy = new ArrayList<>(batch);
                     batch.clear();
                     main.post(new Runnable() {
@@ -132,6 +160,7 @@ public final class EspService extends Service {
                 }
             }
         } catch (Exception e) {
+            Dbg.log(this, "! reader: " + e);
             post("! " + e.getMessage());
         }
     }

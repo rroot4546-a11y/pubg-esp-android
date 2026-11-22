@@ -74,6 +74,27 @@ public final class MainActivity extends Activity {
         });
         root.addView(discover);
 
+        Button test = new Button(this);
+        test.setText("Test overlay (draw fixed box)");
+        test.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override public void onClick(android.view.View v) {
+                Intent i = new Intent(MainActivity.this, EspService.class);
+                i.putExtra(EspService.EXTRA_TEST, true);
+                startForegroundService(i);
+                status.setText("test box should be visible — switch to home screen");
+            }
+        });
+        root.addView(test);
+
+        Button log = new Button(this);
+        log.setText("Show log");
+        log.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override public void onClick(android.view.View v) {
+                status.setText(Dbg.read(MainActivity.this));
+            }
+        });
+        root.addView(log);
+
         Button start = new Button(this);
         start.setText("2. Start ESP");
         start.setOnClickListener(new android.view.View.OnClickListener() {
@@ -129,8 +150,12 @@ public final class MainActivity extends Activity {
                     BufferedReader err = new BufferedReader(
                             new InputStreamReader(p.getErrorStream()));
                     String line;
-                    while ((line = err.readLine()) != null) log.append(line).append("\n");
+                    while ((line = err.readLine()) != null) {
+                        log.append(line).append("\n");
+                        Dbg.log(MainActivity.this, "discover: " + line);
+                    }
                     final int rc = p.waitFor();
+                    Dbg.log(MainActivity.this, "discover exit=" + rc);
                     final String out = "exit=" + rc + "\n" + log.toString();
                     main.post(new Runnable() {
                         @Override public void run() { status.setText(out); }

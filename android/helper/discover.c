@@ -192,31 +192,42 @@ static int find_transform(u64 obj, u64 *off_out) {
     return 0;
 }
 
+static int transform_ok(u64 a) {
+    float w = rfl(a), x = rfl(a+4), y = rfl(a+8), z = rfl(a+12);
+    if (!isfinite(w)||!isfinite(x)||!isfinite(y)||!isfinite(z)) return 0;
+    float n = w*w+x*x+y*y+z*z;
+    if (n < 0.7f || n > 1.3f) return 0;
+    float tx = rfl(a+0x10), ty = rfl(a+0x14), tz = rfl(a+0x18);
+    if (!isfinite(tx)||!isfinite(ty)||!isfinite(tz)) return 0;
+    if (fabsf(tx)>1e6||fabsf(ty)>1e6||fabsf(tz)>1e6) return 0;
+    return 1;
+}
+
 static int find_root(u64 adata, int acount, u64 *root_off, u64 *c2w_off) {
-    int n = acount < 8 ? acount : 8;
-    u64 samples[8];
+    int n = acount < 24 ? acount : 24;
+    u64 samples[24];
     for (int i = 0; i < n; i++) samples[i] = r64(adata + (u64)i*8);
-    int best_root = -1, best_score = 0;
-    for (u64 o = 0; o <= 0x500; o += 8) {
-        int score = 0;
-        for (int i = 0; i < n; i++) if (is_obj(r64(samples[i] + o))) score++;
-        if (score > best_score) { best_score = score; best_root = (int)o; }
-    }
-    if (best_score < (n/2)) return 0;
-    int best_c2w = -1, best_ct = 0;
-    for (u64 o = 0; o <= 0x300; o += 0x10) {
-        int score = 0;
+    int best_r = -1, best_c = -1, best_score = 0;
+    /* UObject header slots (Class/Name/Outer) are excluded: their values
+       also point into executable memory and produce false positives. */
+    for (u64 ro = 0x28; ro <= 0x500; ro += 8) {
+        u64 roots[24];
+        int valid = 0;
         for (int i = 0; i < n; i++) {
-            u64 r = r64(samples[i] + (u64)best_root);
-            if (!r) continue;
-            u64 t;
-            if (find_transform(r, &t) && t == o) score++;
+            roots[i] = r64(samples[i] + ro);
+            if (is_obj(roots[i])) valid++;
         }
-        if (score > best_ct) { best_ct = score; best_c2w = (int)o; }
+        if (valid < 2) continue;
+        for (u64 co = 0; co <= 0x300; co += 0x10) {
+            int score = 0;
+            for (int i = 0; i < n; i++)
+                if (is_obj(roots[i]) && transform_ok(roots[i] + co)) score++;
+            if (score > best_score) { best_score = score; best_r = (int)ro; best_c = (int)co; }
+        }
     }
-    if (best_c2w < 0) return 0;
-    *root_off = (u64)best_root;
-    *c2w_off = (u64)best_c2w;
+    if (best_score < 2 || best_r < 0 || best_c < 0) return 0;
+    *root_off = (u64)best_r;
+    *c2w_off = (u64)best_c;
     return 1;
 }
 

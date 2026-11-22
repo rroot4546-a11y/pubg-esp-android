@@ -83,6 +83,16 @@ On device:
    the offset it found and the exit code — `exit=0` means it wrote a config.
 4. Tap **2. Start ESP**, then switch to the game.
 
+### Diagnostics (v1.2+)
+
+- **Test overlay (draw fixed box)** — draws a guaranteed red box. If that does not appear,
+  overlay permission / service is the problem, not memory reading.
+- **Show log** — prints `/storage/emulated/0/Android/data/com.oll.esp/files/oll_esp.log`.
+  Grab it with `adb pull /sdcard/Android/data/com.oll.esp/files/oll_esp.log` too.
+- During ESP operation the log records scanner output, the first decoded target, and a frame
+  summary every 100 frames (`frames=N withTargets=M last=K`). `withTargets=0` means the
+  offset chain is still wrong; `last>0` with no visible box means the overlay is the issue.
+
 You can still edit `/data/data/com.oll.esp/files/config.txt` by hand; it is created once and
 is never overwritten on later launches (only the auto-find button rewrites it). Bone indices
 stay at `-1` after auto-discovery, so the ESP draws root-location boxes without a skeleton.
