@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.widget.Button;
@@ -12,14 +14,17 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 public final class MainActivity extends Activity {
     private EditText pkgField;
     private TextView status;
+    private final Handler main = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle bundle) {
@@ -59,6 +64,15 @@ public final class MainActivity extends Activity {
             }
         });
         root.addView(grant);
+
+        Button discover = new Button(this);
+        discover.setText("Auto-find offsets (game must be open)");
+        discover.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override public void onClick(android.view.View v) {
+                runDiscovery(pkgField.getText().toString().trim());
+            }
+        });
+        root.addView(discover);
 
         Button start = new Button(this);
         start.setText("2. Start ESP");
@@ -101,12 +115,45 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void runDiscovery(final String pkg) {
+        status.setText("scanning " + pkg + " ...");
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    File tool = new File(getFilesDir(), "espdiscover");
+                    File cfg = new File(getFilesDir(), "config.txt");
+                    String cmd = tool.getAbsolutePath() + " " + pkg + " "
+                            + cfg.getAbsolutePath();
+                    Process p = Runtime.getRuntime().exec(new String[]{"su", "-c", cmd});
+                    StringBuilder log = new StringBuilder();
+                    BufferedReader err = new BufferedReader(
+                            new InputStreamReader(p.getErrorStream()));
+                    String line;
+                    while ((line = err.readLine()) != null) log.append(line).append("\n");
+                    final int rc = p.waitFor();
+                    final String out = "exit=" + rc + "\n" + log.toString();
+                    main.post(new Runnable() {
+                        @Override public void run() { status.setText(out); }
+                    });
+                } catch (final Exception e) {
+                    main.post(new Runnable() {
+                        @Override public void run() {
+                            status.setText("discovery error: " + e.getMessage());
+                        }
+                    });
+                }
+            }
+        }).start();
+    }
+
     private void installAssets() {
         try {
             copy("esphelper", true);
+            copy("espdiscover", true);
             copy("config.txt", false);
             File h = new File(getFilesDir(), "esphelper");
-            if (!h.setExecutable(true)) status.setText("chmod failed");
+            File d = new File(getFilesDir(), "espdiscover");
+            if (!h.setExecutable(true) || !d.setExecutable(true)) status.setText("chmod failed");
         } catch (Exception e) {
             status.setText("asset error: " + e.getMessage());
         }

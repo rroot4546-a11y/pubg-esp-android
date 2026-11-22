@@ -27,6 +27,10 @@ echo "[1/6] root helper (arm64)"
   -resource-dir="$RES_DIR" -fuse-ld=lld -static -Os -ffunction-sections \
   -Wl,--gc-sections -o "$OUT/esphelper" "$SRC/helper/helper.c" -lm
 
+"$CLANG" --target=aarch64-linux-android33 --sysroot="$SYSROOT" \
+  -resource-dir="$RES_DIR" -fuse-ld=lld -static -Os -ffunction-sections \
+  -Wl,--gc-sections -o "$OUT/espdiscover" "$SRC/helper/discover.c" -lm
+
 echo "[2/6] manifest / resources"
 "$AAPT2" link -o "$OUT/base.apk" -I "$AJAR" \
   --manifest "$SRC/AndroidManifest.xml" --java "$OUT/gen" \
@@ -45,6 +49,7 @@ java -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 \
 echo "[5/6] stage"
 cp "$OUT/base.apk" "$OUT/unsigned.apk"
 cp "$OUT/esphelper" "$OUT/stage/assets/esphelper"
+cp "$OUT/espdiscover" "$OUT/stage/assets/espdiscover"
 cp "$SRC/assets/config.txt" "$OUT/stage/assets/config.txt"
 ( cd "$OUT/classes" && zip -q -r "$OUT/unsigned.apk" classes.dex )
 ( cd "$OUT/stage" && zip -q -r "$OUT/unsigned.apk" assets )

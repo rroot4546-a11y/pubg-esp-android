@@ -75,10 +75,17 @@ adb shell am start -n com.oll.esp/.MainActivity
 
 On device:
 
-1. Tap **1. Grant overlay permission** and enable "Display over other apps".
-2. Edit `/data/data/com.oll.esp/files/config.txt` with your offsets (it is created once and
-   never overwritten by later launches).
-3. Type the target package, tap **2. Start ESP**, then switch to the game.
+1. Open the game first and leave it in the lobby.
+2. Tap **1. Grant overlay permission** and enable "Display over other apps".
+3. Type the target package and tap **Auto-find offsets**. The bundled `espdiscover` binary
+   scans the live process for `GWorld`, the level actor array, root component / transform,
+   player controller, camera manager and POV, then writes `config.txt`. The status box prints
+   the offset it found and the exit code — `exit=0` means it wrote a config.
+4. Tap **2. Start ESP**, then switch to the game.
+
+You can still edit `/data/data/com.oll.esp/files/config.txt` by hand; it is created once and
+is never overwritten on later launches (only the auto-find button rewrites it). Bone indices
+stay at `-1` after auto-discovery, so the ESP draws root-location boxes without a skeleton.
 
 The helper is executed through `su`, so the device must be rooted and root access granted to
 the app. Overlay permission is required on Android 8+. The app keeps a foreground service alive
