@@ -2,6 +2,7 @@
 *.so
 *.apk
 frida-server*
+build/
 __pycache__/
 .idea/
 .vscode/

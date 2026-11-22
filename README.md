@@ -55,6 +55,35 @@ Package names by region:
 
 If `CFG.lib` does not match, run `tools/module_info.js` first and copy the real module name.
 
+## Standalone APK (no Frida needed)
+
+`android/` is a complete Android 34 arm64 APK. It bundles a static root helper (`process_vm_readv`
+against the game process) and an in-app transparent overlay. No Frida, no repackaging of the game.
+
+Build on a host with the local SDK layout (`/opt/sdk`, `/opt/aapt2-shim`, NDK r25c):
+
+```bash
+./android/build.sh          # -> build/OLL-ESP.apk (debug-signed, arm64)
+```
+
+Install and run:
+
+```bash
+adb install -r build/OLL-ESP.apk
+adb shell am start -n com.oll.esp/.MainActivity
+```
+
+On device:
+
+1. Tap **1. Grant overlay permission** and enable "Display over other apps".
+2. Edit `/data/data/com.oll.esp/files/config.txt` with your offsets (it is created once and
+   never overwritten by later launches).
+3. Type the target package, tap **2. Start ESP**, then switch to the game.
+
+The helper is executed through `su`, so the device must be rooted and root access granted to
+the app. Overlay permission is required on Android 8+. The app keeps a foreground service alive
+while the ESP runs; **3. Stop ESP** kills the helper and removes the overlay.
+
 ## Offset recovery (one time per game update)
 
 All 12 offsets in `CFG.off` are **module-relative** — add them to the base reported by

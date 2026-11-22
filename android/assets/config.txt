@@ -1,0 +1,29 @@
+# Paste your per-version offsets here. All values are hex or decimal.
+# Recover them using tools/addr_to_offset.js + README.md in the repo root.
+GWorld=0x0
+UWorld_PersistentLevel=0x0
+UWorld_FirstPlayerController=0x0
+ULevel_Actors=0x0
+AActor_RootComponent=0x0
+Pawn_PlayerState=0x0
+PlayerState_TeamId=0x0
+ACharacter_Mesh=0x0
+USkinnedMeshComponent_BoneArray=0x0
+USceneComponent_ComponentToWorld=0x0
+APlayerController_PlayerCameraManager=0x0
+APlayerController_AcknowledgedPawn=0x0
+APlayerCameraManager_CameraCachePOV=0x0
+bones.head=-1
+bones.neck=-1
+bones.spine=-1
+bones.pelvis=-1
+bones.lShoulder=-1
+bones.lElbow=-1
+bones.lHand=-1
+bones.rShoulder=-1
+bones.rElbow=-1
+bones.rHand=-1
+bones.lKnee=-1
+bones.lFoot=-1
+bones.rKnee=-1
+bones.rFoot=-1
