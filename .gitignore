@@ -1,0 +1,8 @@
+*.log
+*.so
+*.apk
+frida-server*
+__pycache__/
+.idea/
+.vscode/
+.DS_Store
